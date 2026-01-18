@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: 0BSD
 # Author: Lasse Collin
 
-prefix=C:/Users/Prabhjyot Singh/Dropbox/PC/Desktop/DA/python/venv/Library
+prefix=D:/DA/python/venv/Library
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
