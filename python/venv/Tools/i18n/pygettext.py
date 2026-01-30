@@ -174,7 +174,6 @@ DEFAULTKEYWORDS = ', '.join(default_keywords)
 EMPTYSTRING = ''
 
 
-
 # The normal pot-file header. msgmerge and Emacs's po-mode work better if it's
 # there.
 pot_header = _('''\
@@ -196,7 +195,7 @@ msgstr ""
 
 ''')
 
-
+
 def usage(code, msg=''):
     print(__doc__ % globals(), file=sys.stderr)
     if msg:
@@ -204,19 +203,18 @@ def usage(code, msg=''):
     sys.exit(code)
 
 
-
 def make_escapes(pass_nonascii):
     global escapes, escape
     if pass_nonascii:
         # Allow non-ascii characters to pass through so that e.g. 'msgid
-        # "Höhe"' would result not result in 'msgid "H\366he"'.  Otherwise we
+        # "Höhe"' would not result in 'msgid "H\366he"'.  Otherwise we
         # escape any character outside the 32..126 range.
         mod = 128
         escape = escape_ascii
     else:
         mod = 256
         escape = escape_nonascii
-    escapes = [r"\%03o" % i for i in range(mod)]
+    escapes = [fr"\{i:03o}" for i in range(mod)]
     for i in range(32, 127):
         escapes[i] = chr(i)
     escapes[ord('\\')] = r'\\'
@@ -258,7 +256,7 @@ def normalize(s, encoding):
         s = '""\n"' + lineterm.join(lines) + '"'
     return s
 
-
+
 def containsAny(str, set):
     """Check whether 'str' contains ANY of the chars in 'set'"""
     return 1 in [c in str for c in set]
@@ -307,7 +305,7 @@ def getFilesForName(name):
 
     return []
 
-
+
 class TokenEater:
     def __init__(self, options):
         self.__options = options
@@ -335,13 +333,17 @@ class TokenEater:
                 if ttype == tokenize.STRING and is_literal_string(tstring):
                     self.__addentry(safe_eval(tstring), lineno, isdocstring=1)
                     self.__freshmodule = 0
-                elif ttype not in (tokenize.COMMENT, tokenize.NL):
-                    self.__freshmodule = 0
-                return
+                    return
+                if ttype in (tokenize.COMMENT, tokenize.NL, tokenize.ENCODING):
+                    return
+                self.__freshmodule = 0
             # class or func/method docstring?
             if ttype == tokenize.NAME and tstring in ('class', 'def'):
                 self.__state = self.__suiteseen
                 return
+        if ttype == tokenize.NAME and tstring in ('class', 'def'):
+            self.__state = self.__ignorenext
+            return
         if ttype == tokenize.NAME and tstring in opts.keywords:
             self.__state = self.__keywordseen
             return
@@ -449,6 +451,9 @@ class TokenEater:
                 }, file=sys.stderr)
             self.__state = self.__waiting
 
+    def __ignorenext(self, ttype, tstring, lineno):
+        self.__state = self.__waiting
+
     def __addentry(self, msg, lineno=None, isdocstring=0):
         if lineno is None:
             lineno = self.__lineno
@@ -514,7 +519,6 @@ class TokenEater:
                 print('msgstr ""\n', file=fp)
 
 
-
 def main():
     global default_keywords
     try:
@@ -616,7 +620,7 @@ def main():
         try:
             with open(options.excludefilename) as fp:
                 options.toexclude = fp.readlines()
-        except IOError:
+        except OSError:
             print(_(
                 "Can't read --exclude-file: %s") % options.excludefilename, file=sys.stderr)
             sys.exit(1)
@@ -674,7 +678,7 @@ def main():
         if closep:
             fp.close()
 
-
+
 if __name__ == '__main__':
     main()
     # some more test strings
